@@ -1,0 +1,14 @@
+{
+    "name": "futureactivities/magento2-pricefrom",
+    "description": "A Magento 2 module that add a 'price from' attribute to configurable products that auto populates on save.",
+    "version": "1.0.0",
+    "type": "magento2-module",
+    "require": {
+    },
+    "autoload": {
+        "files": [ "registration.php" ],
+        "psr-4": {
+          "FutureActivities\\PriceFrom\\": ""
+        }
+    }
+}
