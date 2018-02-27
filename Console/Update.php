@@ -11,6 +11,8 @@ use Magento\Framework\App\{ObjectManager, State};
  */
 class Update extends Command
 {
+    protected $objectManager;
+    
     protected function configure()
     {
         $this->setName('fa:price-from:update');
@@ -21,30 +23,44 @@ class Update extends Command
    
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $objectManager = ObjectManager::getInstance();
-        $state = $objectManager->get('Magento\Framework\App\State');
+        $this->objectManager = ObjectManager::getInstance();
+        
+        $state = $this->objectManager->get('Magento\Framework\App\State');
         $state->setAreaCode('frontend');
 
-        $productCollection = $objectManager->create('\Magento\Catalog\Model\ResourceModel\Product\Collection');
+        $storeManager = $this->objectManager->create('\Magento\Store\Model\StoreManagerInterface');
+        $stores = $storeManager->getStores();
+        foreach ($stores AS $store)
+            $this->processStore($store, $output);
+    }
+    
+    protected function processStore($store, &$output)
+    {
+        $productCollection = $this->objectManager->create('\Magento\Catalog\Model\ResourceModel\Product\Collection');
         $productCollection->addAttributeToSelect(['name', 'price_from']);
         $productCollection->addFieldToFilter('type_id', 'configurable');
+        $productCollection->addStoreFilter($store);
+        
+        $output->writeln('Total configurable products found in store '.$store->getName().': '.$productCollection->getSize());
         
         foreach ($productCollection AS $product) {
             $childIds = $product->getTypeInstance()->getUsedProductIds($product);
             
             // Load cheapest product
-            $collection = $objectManager->create('\Magento\Catalog\Model\ResourceModel\Product\Collection');
+            $collection = $this->objectManager->create('\Magento\Catalog\Model\ResourceModel\Product\Collection');
             $collection->addAttributeToSelect(['price']);
             $collection->addAttributeToFilter('entity_id', array('in' => $childIds));
+            $collection->addStoreFilter($store);
             $collection->setOrder('price', 'ASC');
             $collection->setPageSize(1);
            
             if ($cheapestProduct = $collection->getFirstItem())
                 $product->setPriceFrom(floatval($cheapestProduct->getPrice()));
-                
-            $output->writeln($product->getName() .' - '.$product->getPriceFrom());
+            
+            $output->write('.');
             
             $product->save();
         }
+        $output->writeLn('');
     }
 }
