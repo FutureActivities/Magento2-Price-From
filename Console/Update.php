@@ -45,7 +45,7 @@ class Update extends Command
         
         foreach ($productCollection AS $product) {
             $childIds = $product->getTypeInstance()->getUsedProductIds($product);
-            
+
             // Load cheapest product
             $collection = $this->objectManager->create('\Magento\Catalog\Model\ResourceModel\Product\Collection');
             $collection->addAttributeToSelect(['price']);
@@ -59,6 +59,7 @@ class Update extends Command
             
             $output->write('.');
             
+            $product->setStoreId($store->getId());
             $product->save();
         }
         $output->writeLn('');
