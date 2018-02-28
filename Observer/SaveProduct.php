@@ -6,11 +6,13 @@ use Magento\Framework\Event\ObserverInterface;
 
 class SaveProduct implements ObserverInterface
 {
+    protected $productCollectionFactory;
     protected $productFactory;
     
-    public function __construct(\Magento\Catalog\Model\ResourceModel\Product\CollectionFactory $productCollectionFactory)
+    public function __construct(\Magento\Catalog\Model\ResourceModel\Product\CollectionFactory $productCollectionFactory, \Magento\Catalog\Model\ProductFactory $productFactory)
     {
-        $this->productFactory = $productCollectionFactory;
+        $this->productCollectionFactory = $productCollectionFactory;
+        $this->productFactory = $productFactory;
     }
     
     public function execute(\Magento\Framework\Event\Observer $observer)
@@ -19,16 +21,18 @@ class SaveProduct implements ObserverInterface
         
         if ($product->getTypeId() != 'configurable')
             return;
-            
+        
         $childIds = $product->getTypeInstance()->getUsedProductIds($product);
         
-        $collection = $this->productFactory->create();
+        $collection = $this->productCollectionFactory->create();
         $collection->addAttributeToSelect('*');
         $collection->addAttributeToFilter('entity_id', array('in' => $childIds));
         $collection->setOrder('price', 'ASC');
         $collection->setPageSize(1);
-       
-        if ($cheapestProduct = $collection->getFirstItem())
-            $product->setPriceFrom(floatval($cheapestProduct->getPrice()));
+        
+        if ($collectionFirst = $collection->getFirstItem()) {
+            if ($cheapestProduct = $this->productFactory->create()->setStoreId($product->getStoreId())->load($collectionFirst->getId()))
+                $product->setPriceFrom(floatval($cheapestProduct->getPrice()));
+        }
     }
 }

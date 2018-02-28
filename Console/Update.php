@@ -44,24 +44,13 @@ class Update extends Command
         $output->writeln('Total configurable products found in store '.$store->getName().': '.$productCollection->getSize());
         
         foreach ($productCollection AS $product) {
-            $childIds = $product->getTypeInstance()->getUsedProductIds($product);
-
-            // Load cheapest product
-            $collection = $this->objectManager->create('\Magento\Catalog\Model\ResourceModel\Product\Collection');
-            $collection->addAttributeToSelect(['price']);
-            $collection->addAttributeToFilter('entity_id', array('in' => $childIds));
-            $collection->addStoreFilter($store);
-            $collection->setOrder('price', 'ASC');
-            $collection->setPageSize(1);
-           
-            if ($cheapestProduct = $collection->getFirstItem())
-                $product->setPriceFrom(floatval($cheapestProduct->getPrice()));
-            
             $output->write('.');
             
+            // Set the product store ID then save - this will trigger the observer event
             $product->setStoreId($store->getId());
             $product->save();
         }
+        
         $output->writeLn('');
     }
 }
